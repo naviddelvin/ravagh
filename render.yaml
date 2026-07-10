@@ -1,0 +1,57 @@
+databases:
+  - name: ravagh-db
+    plan: free
+    databaseName: ravagh
+    user: ravagh
+
+services:
+  - type: web
+    name: ravagh
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: APP_NAME
+        value: "رواق"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_TIMEZONE
+        value: Asia/Tehran
+      - key: APP_LOCALE
+        value: fa
+      - key: APP_KEY
+        value: "base64:Uqp6XDizGLZYiXAdmccFVRskktXwYhjzB+wpIpvXVgI="
+      - key: APP_URL
+        value: "https://ravagh.onrender.com"
+      - key: LOG_CHANNEL
+        value: stack
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: ravagh-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ravagh-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: ravagh-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: ravagh-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: ravagh-db
+          property: password
