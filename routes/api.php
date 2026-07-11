@@ -70,11 +70,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders/{order}/confirm-payment', [OrderController::class, 'confirmPayment']);
 
     // رزرو نوبت خدمات
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/bookings/{booking}', [BookingController::class, 'show']);
     Route::post('/services/{service}/bookings', [BookingController::class, 'store']);
+    Route::post('/bookings/{booking}/confirm-payment', [BookingController::class, 'confirmPayment']);
 
     // استوری (تعامل کاربر)
     Route::post('/stories/{story}/interact', [StoryController::class, 'interact']);

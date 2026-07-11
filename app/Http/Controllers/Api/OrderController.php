@@ -53,6 +53,14 @@ class OrderController extends Controller
     }
 
     // بروزرسانی وضعیت توسط غرفه‌دار (آماده‌سازی/ارسال/تحویل/لغو)
+    public function confirmPayment(Request $request, Order $order)
+    {
+        abort_if($order->user_id !== $request->user()->id, 403);
+        $data = $request->validate(['gateway_ref' => ['required', 'string']]);
+        $this->orderService->confirmGatewayPayment($order, $data['gateway_ref']);
+        return response()->json($order->fresh());
+    }
+
     public function updateStatus(Request $request, Order $order)
     {
         abort_if($order->shop->user_id !== $request->user()->id, 403);

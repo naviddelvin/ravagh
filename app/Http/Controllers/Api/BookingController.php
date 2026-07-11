@@ -55,6 +55,14 @@ class BookingController extends Controller
     }
 
     // لیست نوبت‌های یک غرفه برای غرفه‌دار
+    public function confirmPayment(Request $request, Booking $booking)
+    {
+        abort_if($booking->user_id !== $request->user()->id, 403);
+        $data = $request->validate(['gateway_ref' => ['required', 'string']]);
+        $this->bookingService->confirmGatewayPayment($booking, $data['gateway_ref']);
+        return response()->json($booking->fresh());
+    }
+
     public function shopBookings(Request $request, \App\Models\Shop $shop)
     {
         abort_if($shop->user_id !== $request->user()->id, 403);

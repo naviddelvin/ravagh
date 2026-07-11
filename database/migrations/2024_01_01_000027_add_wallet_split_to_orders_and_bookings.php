@@ -9,21 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            if (! Schema::hasColumn('orders', 'wallet_amount')) {
-                $table->unsignedBigInteger('wallet_amount')->default(0)->after('total_amount');
-            }
-            if (! Schema::hasColumn('orders', 'gateway_amount')) {
-                $table->unsignedBigInteger('gateway_amount')->default(0)->after('wallet_amount');
-            }
+            $table->unsignedBigInteger('wallet_amount')->default(0)->after('total_amount');
+            $table->unsignedBigInteger('gateway_amount')->default(0)->after('wallet_amount');
         });
 
         Schema::table('bookings', function (Blueprint $table) {
-            if (! Schema::hasColumn('bookings', 'wallet_amount')) {
-                $table->unsignedBigInteger('wallet_amount')->default(0)->after('total_amount');
-            }
-            if (! Schema::hasColumn('bookings', 'gateway_amount')) {
-                $table->unsignedBigInteger('gateway_amount')->default(0)->after('wallet_amount');
-            }
+            $table->unsignedBigInteger('wallet_amount')->default(0)->after('total_amount');
+            $table->unsignedBigInteger('gateway_amount')->default(0)->after('wallet_amount');
         });
     }
 
