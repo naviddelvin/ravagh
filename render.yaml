@@ -11,6 +11,7 @@ services:
     dockerfilePath: ./Dockerfile
     plan: free
     envVars:
+    preDeployCommand: php artisan migrate --force
       - key: APP_NAME
         value: "رواق"
       - key: APP_ENV
