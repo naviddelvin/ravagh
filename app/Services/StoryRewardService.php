@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Follow;
 use App\Models\Story;
 use App\Models\StoryView;
 use App\Models\User;
@@ -9,14 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class StoryRewardService
 {
-    // مبلغ پاداش هر نوع تعامل، به عنوان درصدی از استخر پاداش استوری (reward_pool_share)
-    // این نسبت‌ها قابل تنظیم در جدول settings هستند؛ در اینجا مقادیر پیش‌فرض آمده است.
-    private const WEIGHT_VIEW = 40;    // مشاهده کامل
+    private const WEIGHT_VIEW = 40;
     private const WEIGHT_LIKE = 15;
     private const WEIGHT_SHARE = 25;
     private const WEIGHT_COMMENT = 20;
 
-    // ثبت تعامل کاربر با استوری و اعطای پاداش (در صورت نبود تقلب)
     public function recordInteraction(Story $story, User $user, array $interaction, ?string $ip = null, ?string $deviceId = null): StoryView
     {
         abort_if($story->isExpired(), 422, 'این استوری منقضی شده است.');
@@ -27,10 +25,8 @@ class StoryRewardService
                 ['ip_address' => $ip, 'device_id' => $deviceId]
             );
 
-            // ضدتقلب پایه: اگر IP/دستگاه با تعداد غیرعادی از کاربران متفاوت در بازه کوتاه تکرار شود
-            // باید در لایه AntiFraud (بند ۱۶ سند) بررسی و مسدود شود؛ اینجا فقط یک‌بار در ازای هر کاربر مجاز است.
             if ($view->reward_granted) {
-                return $view; // قبلاً پاداش گرفته، دوباره پرداخت نمی‌شود
+                return $view;
             }
 
             $rewardWeight = 0;
@@ -56,7 +52,11 @@ class StoryRewardService
                 $story->increment('comments_count');
             }
 
-            if ($rewardWeight > 0) {
+            $isFollowing = Follow::where('user_id', $user->id)
+                ->where('shop_id', $story->shop_id)
+                ->exists();
+
+            if ($rewardWeight > 0 && $isFollowing) {
                 $rewardAmount = (int) round($story->reward_pool_share * $rewardWeight / 100);
 
                 if ($rewardAmount > 0) {
@@ -78,7 +78,6 @@ class StoryRewardService
         });
     }
 
-    // ثبت صرف کلیک روی استوری (بدون پاداش مستقیم، فقط آمار برای غرفه‌دار)
     public function recordClick(Story $story): void
     {
         $story->increment('clicks_count');

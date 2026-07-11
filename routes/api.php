@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
@@ -34,6 +35,7 @@ Route::post('/auth/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
+Route::get('/shops/{shop}/followers-count', [FollowController::class, 'followersCount']);
 Route::get('/shops/{shop}/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/shops/{shop}/services', [ServiceController::class, 'index']);
@@ -92,6 +94,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // درخواست تسویه
     Route::get('/withdraw-requests', [WithdrawRequestController::class, 'index']);
     Route::post('/withdraw-requests', [WithdrawRequestController::class, 'store']);
+
+    Route::post('/shops/{shop}/follow', [FollowController::class, 'store']);
+    Route::delete('/shops/{shop}/follow', [FollowController::class, 'destroy']);
+    Route::get('/shops/{shop}/follow-status', [FollowController::class, 'check']);
 
     /*
     |----------------------------------------------------------------------

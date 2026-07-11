@@ -98,4 +98,14 @@ class Shop extends Model
     {
         return $this->morphMany(Review::class, 'reviewable');
     }
+
+    public function followers()
+    {
+        return $this->hasMany(Follow::class);
+    }
+
+    public function isFollowedBy(User $user): bool
+    {
+        return $this->followers()->where('user_id', $user->id)->exists();
+    }
 }

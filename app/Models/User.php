@@ -87,4 +87,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(User::class, 'referred_by');
     }
+
+    public function follows()
+    {
+        return $this->hasMany(Follow::class);
+    }
+
+    public function isFollowing(Shop $shop): bool
+    {
+        return $this->follows()->where('shop_id', $shop->id)->exists();
+    }
 }
