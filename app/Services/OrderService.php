@@ -4,15 +4,18 @@ namespace App\Services;
 
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Models\User;
-use App\Models\Wallet;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
-    // ثبت سفارش از روی سبد خرید کاربر — به تفکیک هر غرفه یک سفارش ساخته می‌شود
-    // چون هر Order به یک shop_id متصل است.
+    // حداکثر درصدی از مبلغ خرید که مجاز است از کیف‌پول کم شود؛ باقی حتماً باید از درگاه پرداخت شود
+    // تا موجودی کیف‌پول (که معمولاً از پاداش/کش‌بک است) بین چند خرید تقسیم بماند.
+    // این عدد از پنل مدیریت (settings.max_wallet_payment_percent) قابل تغییر است.
+    private const DEFAULT_MAX_WALLET_PERCENT = 50;
+
     public function checkout(User $user, string $paymentMethod, ?string $couponCode = null): array
     {
         $cart = $user->cart()->with('items.product.shop')->firstOrFail();
@@ -39,6 +42,11 @@ class OrderService
 
                 $total = max(0, $subtotal - $discount);
 
+                // اگر کاربر «درگاه» را انتخاب کرده باشد، اصلاً از کیف‌پول کم نمی‌شود
+                [$walletAmount, $gatewayAmount] = $paymentMethod === 'wallet'
+                    ? $this->splitAmount($total, $user)
+                    : [0, $total];
+
                 $order = Order::create([
                     'user_id' => $user->id,
                     'shop_id' => $shopId,
@@ -48,6 +56,8 @@ class OrderService
                     'subtotal' => $subtotal,
                     'discount_amount' => $discount,
                     'total_amount' => $total,
+                    'wallet_amount' => $walletAmount,
+                    'gateway_amount' => $gatewayAmount,
                     'payment_method' => $paymentMethod,
                     'is_paid' => false,
                 ]);
@@ -63,44 +73,52 @@ class OrderService
                     $item->product->decrement('stock', $item->quantity);
                 }
 
-                if ($paymentMethod === 'wallet') {
-                    $this->payWithWallet($order);
+                if ($walletAmount > 0) {
+                    $wallet = $user->wallet()->firstOrCreate([]);
+                    $wallet->debit(
+                        $walletAmount,
+                        'order_payment',
+                        'پرداخت بخشی از ' . $order->referenceLabel() . ' از کیف‌پول',
+                        $order
+                    );
                 }
 
+                // اگر کل مبلغ با کیف‌پول پوشش داده شد، سفارش پرداخت‌شده است؛
+                // در غیر این صورت باید مابقی (gateway_amount) از درگاه تکمیل شود.
+                if ($gatewayAmount === 0) {
+                    $order->update(['is_paid' => true, 'status' => 'processing']);
+                }
+
+                $coupon?->increment('used_count');
                 $orders[] = $order;
             }
 
-            $coupon?->increment('used_count');
             $user->cart->items()->delete();
         });
 
         return $orders;
     }
 
-    // پرداخت سفارش از موجودی کیف پول
-    public function payWithWallet(Order $order): void
+    // محاسبه سهم کیف‌پول و درگاه بر اساس سقف مجاز در تنظیمات
+    private function splitAmount(int $total, User $user): array
     {
-        /** @var Wallet $wallet */
-        $wallet = $order->user->wallet()->firstOrCreate([]);
+        $wallet = $user->wallet()->firstOrCreate([]);
+        $maxPercent = (int) Setting::get('max_wallet_payment_percent', self::DEFAULT_MAX_WALLET_PERCENT);
+        $maxAllowed = (int) floor($total * $maxPercent / 100);
+        $walletAmount = min($wallet->balance, $maxAllowed);
+        $gatewayAmount = $total - $walletAmount;
 
-        $wallet->debit(
-            amount: $order->total_amount,
-            source: 'order_payment',
-            description: "پرداخت سفارش {$order->order_number}",
-            reference: $order
-        );
-
-        $order->update(['is_paid' => true, 'status' => 'processing']);
+        return [$walletAmount, $gatewayAmount];
     }
 
-    // تایید پرداخت درگاه بانکی (Callback)
+    // تایید پرداخت درگاه برای باقی‌ماندهٔ مبلغ (gateway_amount)
     public function confirmGatewayPayment(Order $order, string $gatewayRef): void
     {
         $order->update(['is_paid' => true, 'status' => 'processing']);
 
         $order->payments()->create([
             'user_id' => $order->user_id,
-            'amount' => $order->total_amount,
+            'amount' => $order->gateway_amount,
             'method' => 'gateway',
             'status' => 'success',
             'gateway_ref' => $gatewayRef,
