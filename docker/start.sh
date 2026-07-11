@@ -7,7 +7,7 @@ fi
 if [ -z "$APP_KEY" ]; then
     php artisan key:generate --force
 fi
-php artisan migrate:fresh --force --seed
+php artisan migrate --force
 php artisan config:cache || true
 php artisan route:cache || true
 apache2-foreground
