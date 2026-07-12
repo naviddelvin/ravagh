@@ -17,7 +17,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: "false"
+        value: "true"
       - key: APP_TIMEZONE
         value: Asia/Tehran
       - key: APP_LOCALE
