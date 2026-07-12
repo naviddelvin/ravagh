@@ -30,6 +30,7 @@ class ProductController extends Controller
     public function store(Request $request, Shop $shop)
     {
         abort_if($shop->user_id !== $request->user()->id, 403, 'شما مالک این غرفه نیستید.');
+        abort_if(! $shop->isProductShop(), 422, 'این غرفه خدماتی است و امکان افزودن محصول ندارد.');
 
         $data = $request->validate([
             'category_id' => ['nullable', 'exists:categories,id'],

@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ShopController extends Controller
 {
-    // لیست غرفه‌ها برای صفحه اصلی/جستجو (فقط غرفه‌های تاییدشده)
     public function index(Request $request)
     {
         $query = Shop::query()->where('status', 'active')->with('category');
@@ -17,7 +17,9 @@ class ShopController extends Controller
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->integer('category_id'));
         }
-
+        if ($request->filled('type')) {
+            $query->where('type', $request->string('type'));
+        }
         if ($request->filled('q')) {
             $query->where('name', 'like', '%' . $request->string('q') . '%');
         }
@@ -34,11 +36,11 @@ class ShopController extends Controller
         );
     }
 
-    // ایجاد غرفه توسط کاربر (نقش او به غرفه‌دار تبدیل می‌شود و وضعیت pending تا تایید مدیر)
     public function store(Request $request)
     {
         $data = $request->validate([
             'category_id' => ['nullable', 'exists:categories,id'],
+            'type' => ['required', 'in:product,service'],
             'name' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string'],
             'phone' => ['nullable', 'regex:/^09[0-9]{9}$/'],
@@ -51,9 +53,8 @@ class ShopController extends Controller
         $data['user_id'] = $request->user()->id;
         $data['slug'] = Str::slug($data['name']) . '-' . Str::random(5);
         $data['status'] = 'pending';
-        // «۳ ماه اول رایگان»: بدون کمیسیون تا پایان دوره
         $data['trial_ends_at'] = now()->addMonths(3);
-        $data['commission_percent'] = (int) \App\Models\Setting::get('default_commission_percent', 10);
+        $data['commission_percent'] = (int) Setting::get('default_commission_percent', 10);
 
         $shop = Shop::create($data);
 
@@ -62,7 +63,6 @@ class ShopController extends Controller
         return response()->json($shop, 201);
     }
 
-    // ویرایش توسط صاحب غرفه
     public function update(Request $request, Shop $shop)
     {
         abort_if($shop->user_id !== $request->user()->id, 403, 'شما مالک این غرفه نیستید.');
@@ -85,15 +85,16 @@ class ShopController extends Controller
         return response()->json($shop);
     }
 
-    // گزارش بازدید و فروش برای پنل غرفه‌دار (بند ۱۲ سند)
     public function report(Request $request, Shop $shop)
     {
         abort_if($shop->user_id !== $request->user()->id, 403);
 
         return response()->json([
+            'type' => $shop->type,
             'total_orders' => $shop->orders()->count(),
             'paid_orders' => $shop->orders()->where('is_paid', true)->count(),
-            'total_revenue' => $shop->orders()->where('is_paid', true)->sum('total_amount'),
+            'total_revenue' => $shop->orders()->where('is_paid', true)->sum('total_amount')
+                + $shop->bookings()->where('is_paid', true)->sum('total_amount'),
             'products_count' => $shop->products()->count(),
             'services_count' => $shop->services()->count(),
             'active_stories' => $shop->stories()->where('status', 'active')->count(),

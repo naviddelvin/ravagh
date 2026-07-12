@@ -25,6 +25,7 @@ class ServiceController extends Controller
     public function store(Request $request, Shop $shop)
     {
         abort_if($shop->user_id !== $request->user()->id, 403, 'شما مالک این غرفه نیستید.');
+        abort_if(! $shop->isServiceShop(), 422, 'این غرفه فروشگاهی است و امکان افزودن خدمت ندارد.');
 
         $data = $request->validate([
             'category_id' => ['nullable', 'exists:categories,id'],
