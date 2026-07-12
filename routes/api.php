@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ایجاد غرفه (کاربر عادی -> غرفه‌دار)
     Route::post('/shops', [ShopController::class, 'store']);
+    Route::get('/my/shops', [ShopController::class, 'mine']);
 
     // درخواست تسویه
     Route::get('/withdraw-requests', [WithdrawRequestController::class, 'index']);
@@ -127,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/coupons/{coupon}', [CouponController::class, 'update']);
 
         Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+        Route::get('/shops/{shop}/orders', [OrderController::class, 'shopOrders']);
 
         Route::get('/shops/{shop}/bookings', [BookingController::class, 'shopBookings']);
         Route::patch('/bookings/{booking}/status', [BookingController::class, 'updateStatus']);

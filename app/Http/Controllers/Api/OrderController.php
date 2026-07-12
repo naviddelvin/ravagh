@@ -63,6 +63,13 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
+    public function shopOrders(Request $request, \App\Models\Shop $shop)
+    {
+        abort_if($shop->user_id !== $request->user()->id, 403);
+
+        return response()->json($shop->orders()->with('items', 'user:id,name,mobile')->latest()->paginate(20));
+    }
+
         abort_if($order->shop->user_id !== $request->user()->id, 403);
 
         $data = $request->validate([

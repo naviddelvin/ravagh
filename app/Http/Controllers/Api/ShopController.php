@@ -27,6 +27,11 @@ class ShopController extends Controller
         return response()->json($query->paginate(20));
     }
 
+    public function mine(Request $request)
+    {
+        return response()->json($request->user()->shops()->latest()->get());
+    }
+
     public function show(Shop $shop)
     {
         return response()->json(
